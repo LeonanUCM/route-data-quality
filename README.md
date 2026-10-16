@@ -46,16 +46,16 @@ Un cambio brusco de dirección tiene el mismo efecto a menor escala. Dos captura
 
 ### 1.2 El efecto: un splat que se rompe
 
-Las dos vistas son de Rojales, de un splat entrenado con todas las capturas, antes de quitar las que este método marca como fuera de patrón.
+Las dos vistas son del mismo splat de Rojales, entrenado con todas las capturas, antes de quitar las que este método marca como fuera de patrón.
 
 <table>
 <tr>
-<td width="50%" valign="top"><img src="img/rojales-splat-flotantes.jpg" alt="Rojales con capturas malas: gaussianas flotando delante del observador"></td>
-<td width="50%" valign="top"><img src="img/rojales-splat-borde.jpg" alt="Rojales con capturas malas: agujas en el borde y niebla bajo el suelo"></td>
+<td width="50%" valign="top"><img src="img/rojales-splat-flotantes.jpg" alt="Gaussianas enormes que tapan la escena"></td>
+<td width="50%" valign="top"><img src="img/rojales-splat-borde.jpg" alt="Gaussianas correctas, cerca de la escena modelada"></td>
 </tr>
 <tr>
-<td valign="top">Cerca del suelo, la escena queda tapada por manchas largas y borrosas. Son gaussianas creadas para explicar capturas vistas desde fuera del área o hacia el horizonte. Desde el punto de vista de esas capturas no molestan. Desde cualquier otro punto, flotan entre el terreno y el observador.</td>
-<td valign="top">En el borde del área, el terreno acaba en agujas y en una niebla clara por debajo del suelo. Ninguna captura de la misión ve esa zona así: solo la ven las capturas del camino.</td>
+<td valign="top">Las capturas fuera de patrón, aunque sean de la misma área, rompen el modelado. Crean gaussianas enormes que tapan a las correctas.</td>
+<td valign="top">Las gaussianas correctas. Son las que se acercan a la escena modelada.</td>
 </tr>
 </table>
 
@@ -234,7 +234,7 @@ Las mismas capturas después de la ingeniería de datos y del agrupamiento:
 | 0450 | 910 | 40,0 | 270 | 59,9 | 0,0 | −13 | Oblicua O |
 | 0600 | 1210 | 40,1 | 179 | 60,0 | 0,0 | −173 | Oblicua S |
 
-d_alt es 0,0 en las siete y no se muestra. La altura es la del punto de salida, la única que da el EXIF.
+d_alt es 0,0 en las siete y no se muestra. La altura es la del punto de salida, la única que da el EXIF. Con las poses de la SfM las oblicuas salen a 41° y 77 m sobre el suelo, como en la sección 6.1.
 
 Así se lee: la 0001 es la primera captura, con el sensor todavía bajando (18,6 grados de cambio frente a su vecina): camino. La 0406 tiene la inclinación y la altura de la misión, pero su rumbo está 33 grados fuera del grupo Oeste: ruido. En la tabla transformada ya no hace falta saber nada del vehículo para ver qué captura sobra.
 
@@ -276,7 +276,7 @@ Un método que no se puede ver no se puede validar. Y un método que no se ha va
 
 ## 6. Casos reales
 
-Diez rutas completas, de 332 a 1.583 capturas. Siete con solo metadatos EXIF y tres también con las poses de COLMAP.
+Diez rutas completas, de 332 a 1.583 capturas. Seis con solo metadatos EXIF y cuatro también con las poses de COLMAP (Rojales, Divinópolis, Curvelo Água Solene y João Pinheiro h45a).
 
 | Ruta | Capturas | Tamaño | Patrón | Misión | Fuera de patrón | Veredicto |
 |---|---|---|---|---|---|---|
@@ -291,7 +291,7 @@ Diez rutas completas, de 332 a 1.583 capturas. Siete con solo metadatos EXIF y t
 | Pompeu | 588 | 5,76 GB | nadir a 50 m | 83,7 % | 96 | filtrar |
 | Divinópolis | 332 | 0,88 GB | espiral: nadir + oblicuas hacia dentro y fuera | 78,6 % | 71 | filtrar (revisar el giro) |
 
-Las alturas son sobre el suelo.
+Con poses de COLMAP, las cifras salen de ellas y la altura es sobre el suelo. En las demás, la altura es sobre el punto de salida. Las dos rutas de João Pinheiro se dan con EXIF, para compararlas igual.
 
 ### Cómo leer los gráficos
 
@@ -335,9 +335,9 @@ Dos rutas en espiral nadir sobre la misma área, el mismo día: una a 48 m (h45a
 
 ![João Pinheiro h45a, oblicuas](img/joao_h45a-oblicuas.png)
 
-**El patrón.** En las dos rutas todas las oblicuas son del camino. En h45a, las 31 oblicuas son la salida (0004–0016, con el sensor bajando de 54 a 33°) y la vuelta (0824–0846, con el sensor subiendo de 5 a 59°). Ningún grupo de misión. Fue el primer aviso: un primer método de selección, sin estas variables, había metido 24 de ellas en un conjunto de entrenamiento.
+**El patrón.** En las dos rutas todas las oblicuas son del camino. En h45a, las 30 oblicuas son la salida (0004–0015, con el sensor bajando de 54 a 33°), la vuelta (0830–0846, con el sensor subiendo de 17 a 59°) y una última captura, la 0864. Ningún grupo de misión. Fue el primer aviso: un primer método de selección, sin estas variables, había metido 24 de ellas en un conjunto de entrenamiento.
 
-**La inconsistencia.** Para h45a teníamos también las poses de COLMAP. La altura de cada captura según la reconstrucción, comparada con la altura del GPS, muestra un **domo**: el centro queda 1,5 m más alto y el borde 1,6 m más bajo, con una correlación de −0,89 frente a la distancia al centro. La ruta real es plana (altura GPS de 47,9 a 48,0 m). La deformación es de la SfM, no del vehículo.
+**La inconsistencia.** Para h45a teníamos también las poses de COLMAP. La altura de cada captura según la reconstrucción, comparada con la altura del GPS, muestra un **domo**: el 10 % de capturas más cerca del centro queda 1,2 m más alto y el 10 % más lejos, 1,7 m más bajo, con una correlación de −0,89 frente a la distancia al centro. La ruta real es plana (altura GPS de 47,9 a 48,1 m). La deformación es de la SfM, no del vehículo.
 
 ![João Pinheiro h45a, domo](img/joao_h45a-domo.png)
 
@@ -351,7 +351,7 @@ Un domo así se hereda en todo lo que viene después: la malla, la nube y el spl
 
 ![João Pinheiro h30a, oblicuas](img/joao_h30a-oblicuas.png)
 
-h30a tiene más capturas fuera de patrón (77), pero son fáciles de quitar: 45 de camino, 13 de ruido, 11 duplicadas (el vehículo parado antes de la llegada) y 8 casi horizontales, tomadas ya en el suelo. Su nadir es muy regular: 849 capturas a 33,2–33,3 m, una cada 6 m.
+h30a tiene más capturas fuera de patrón (77), pero son fáciles de quitar: 45 de camino, 13 de ruido, 11 duplicadas (el vehículo parado al salir y al llegar) y 8 casi horizontales (5 al salir o al llegar, a menos de 13 m, y 3 seguidas a 34–49 m). Su nadir es muy regular: 849 capturas a 33,2–33,3 m, una cada 6 m.
 
 ### 6.3 Divinópolis: un giro del sensor muy lento
 
@@ -368,25 +368,25 @@ Una espiral con oblicuas a 35° que miran al centro en unas vueltas y hacia fuer
 | Ruido | 36 |
 | Duplicada | 6 |
 
-El ruido tiene una causa concreta. Entre una vuelta "hacia dentro" y otra "hacia fuera", el sensor gira muy despacio, durante 5 a 10 capturas, y en algunos tramos se queda con el rumbo fijo mientras el vehículo avanza (0099–0108 con rumbo 131°, 0298–0309 con 317°). Esas capturas ven el centro de lado y de forma irregular. Es la ruta con menos misión (78,6 %): se puede usar, pero la ruta merece revisión.
+El ruido tiene una causa concreta. Entre una vuelta "hacia dentro" y otra "hacia fuera", el sensor gira muy despacio, durante 5 a 10 capturas, y en algunos tramos se queda con el rumbo fijo mientras el vehículo avanza (0101–0108 con rumbo 131°, 0298–0309 con 317°). Esas capturas ven el centro de lado y de forma irregular. Es la ruta con menos misión (78,6 %): se puede usar, pero la ruta merece revisión.
 
 ### 6.4 Curvelo, Água Solene: el camino de vuelta
 
 ![Curvelo, oblicuas](img/curvelo-oblicuas.png)
 
-832 nadir a 140 m, sin oblicuas de misión. Las capturas 0844–0862 son el camino de vuelta: el sensor fijo a unos 52° y el vehículo yendo hacia el oeste. Las once primeras van a la altura de la misión (ruido: no forman grupo). Las ocho últimas ya bajan entre un 3 y un 8 % por captura (camino). En el mapa forman una línea recta que sale del área. Si entran en el entrenamiento, el splat tiene que explicar el paisaje lejano que ellas ven.
+832 nadir a 140 m, sin oblicuas de misión. Las capturas 0844–0862 son el camino de vuelta: el sensor fijo a unos 52° y el vehículo yendo hacia el oeste. Las once primeras van a la altura de la misión (ruido: no forman grupo). Las ocho últimas ya bajan entre un 3 y un 8 % por captura (camino). En el mapa forman una línea recta que sale del área. Las otras 11 fuera de patrón son una captura de camino (0833) y la llegada (0865–0874). Si entran en el entrenamiento, el splat tiene que explicar el paisaje lejano que ellas ven.
 
 ### 6.5 Pompeu: capturas mirando al horizonte
 
 ![Pompeu, oblicuas](img/pompeu-oblicuas.png)
 
-Al final de la misión, el vehículo vuelve hacia el punto de salida con el sensor casi horizontal (80–90°) y sigue capturando: 58 capturas de horizonte, el 10 % de la ruta. Para la SfM son capturas sin puntos en común con la misión. Para el splat son cielo y paisaje lejano: el peor tipo de dato (sección 1).
+Al final de la misión, el vehículo vuelve hacia el punto de salida con el sensor casi horizontal (80–93°) y sigue capturando: 58 capturas de horizonte, el 10 % de la ruta. Para la SfM son capturas sin puntos en común con la misión. Para el splat son cielo y paisaje lejano: el peor tipo de dato (sección 1).
 
 ### 6.6 Belo Horizonte, Caiçara: capturas extra después de la misión
 
 ![Belo Horizonte, oblicuas](img/bh_caicara-oblicuas.png)
 
-Terminada la nadir, alguien tomó una serie desde el borde sur con el sensor casi horizontal (76–80°): 21 capturas de ruido, todas mirando al este. A los 25 minutos hay otra serie corta a 70 m. Son capturas útiles para otra cosa (un panorama), no para este modelo.
+Terminada la nadir, alguien tomó una serie desde el borde oeste con el sensor casi horizontal (76–80°, justo por debajo del umbral de horizonte): 21 capturas de ruido, primero mirando al este y después girando, de 32 a 244°. A los 25 minutos del inicio hay otra serie corta a 70 m, con el sensor bajando (camino). Son capturas útiles para otra cosa (un panorama), no para este modelo.
 
 ### 6.7 Curvelo, eucalipto: duplicadas en los giros
 
