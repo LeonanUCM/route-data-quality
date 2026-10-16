@@ -26,7 +26,7 @@ El resultado decide una de tres cosas:
 
 ## 1. El problema
 
-La cadena de trabajo es la habitual:
+La cadena de trabajo es la habitual. La SfM (*Structure from Motion*) calcula desde las capturas la pose de cada una y una nube de puntos; COLMAP y OpenSfM son dos programas que la hacen. Una captura **nadir** mira en vertical hacia abajo; una **oblicua** mira inclinada, por ejemplo a 40 grados de la vertical.
 
 ```
 capturas del sensor -> SfM (COLMAP / OpenSfM) -> poses + nube de puntos -> entrenamiento del splat (GPU, ~1 h)
@@ -69,7 +69,7 @@ Revisar el registro de la ruta cuesta segundos. Por eso va primero.
 
 ### 2.1 Metadatos de cada captura
 
-Cada imagen trae dentro un bloque de texto XMP con la pose del sensor en el momento de la captura. Ejemplo real de Rojales (captura 0251; coordenadas recortadas y nombres de campo traducidos):
+Cada imagen trae dentro un bloque de texto XMP (metadatos que el sensor escribe en el archivo) con la pose del sensor en el momento de la captura. Ejemplo real de Rojales (captura 0251; coordenadas recortadas y nombres de campo traducidos):
 
 ```
 latitud            +38.083...
@@ -87,7 +87,7 @@ La hora sale del nombre del archivo: `<prefijo>_20260823150142_0251.JPG` → 23/
 
 ### 2.2 Leer solo lo necesario
 
-Una captura original pesa entre 3 y 16 MB de media, según el sensor, y una ruta tiene cientos. Pero el bloque XMP está al principio del archivo: en las 7.563 capturas del estudio termina siempre antes de los 50 KB. Basta leer el principio de cada archivo y parar en cuanto aparece el final del bloque. No hace falta abrir la imagen ni usar una librería de EXIF.
+Una captura original pesa entre 3 y 16 MB (Divinópolis, unos 2,7 MB), según el sensor, y una ruta tiene cientos. Pero el bloque XMP está al principio del archivo: en las 7.563 capturas del estudio termina siempre antes de los 50 KB. Basta leer el principio de cada archivo y parar en cuanto aparece el final del bloque. No hace falta abrir la imagen ni usar una librería de EXIF.
 
 ```python
 TROZO = 64 * 1024        # 65.536 bytes (64 KB): lo que se lee de cada vez
@@ -127,7 +127,7 @@ Si la ruta ya se procesó, la SfM entrega las poses en formato COLMAP: la rotaci
 | rumbo | dirección del lado de arriba de la imagen | hacia dónde mira el sensor (N, E, S, O) |
 | altura | sensor sobre el suelo (con poses de la SfM) o sobre el punto de salida (solo EXIF) | la escala de la imagen |
 | tiempo | hora del nombre del archivo | el orden de la ruta |
-| **apunta** | rumbo menos la dirección del vehículo al centro del área | 0 = mira hacia dentro, 180 = hacia fuera |
+| **apunta** | rumbo menos la dirección del vehículo al centro del área, de −180 a 180 | 0 = mira hacia dentro, ±180 = hacia fuera, ±90 = de lado |
 | **d_incl, d_alt** | cambio de inclinación (grados) y de altura (%) frente a la captura vecina en el tiempo | estabilidad |
 
 Las dos últimas variables son la clave de todo el método. No están en los datos: hay que construirlas.
