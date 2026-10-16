@@ -104,10 +104,14 @@ with open(ruta, "rb") as f:                     # "rb": leer bytes, no texto
 # En este estudio el bucle da siempre una sola vuelta: el bloque cabe en el primer trozo.
 ```
 
-| Las 10 rutas del estudio | Tamaño |
-|---|---|
-| Imágenes completas (7.563 capturas) | 94,0 GB |
-| Lo que se lee: un trozo de 64 KB por captura | **496 MB (0,5 %)** |
+| Las 10 rutas del estudio | Tamaño | Coste desde la nube* |
+|---|---|---|
+| Imágenes completas (7.563 capturas) | 94,0 GB | 14,10 USD |
+| Lo que se lee: un trozo de 64 KB por captura | **496 MB (0,5 %)** | **0,07 USD** |
+
+\* Transferencia de salida de AWS S3 a Internet en la región São Paulo (sa-east-1), unos 0,15 USD/GB: unos 15 USD por cada 100 GB. Leer solo el principio de cada archivo es una petición GET con rango (*Range*): no hace falta bajar el archivo entero.
+
+![Coste de leer las 10 rutas desde la nube: 14,10 USD con las imágenes completas, 0,07 USD leyendo solo el principio](img/coste-lectura.svg)
 
 Rojales se analiza entero en 5 s, gráficos incluidos. Es la diferencia entre un control que se hace siempre y uno que se salta por pereza.
 
