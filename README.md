@@ -10,9 +10,9 @@
 
 Un vehículo autónomo que sigue una ruta programada toma cientos de capturas con un patrón fijo: misma altura, misma inclinación del sensor y direcciones que se repiten. Pero no todas las capturas son de la misión. También están las de la salida, las del camino de ida y vuelta, las de la llegada, las tomadas con el vehículo parado y las de un giro lento del sensor. Para la reconstrucción 3D esas capturas no son "un poco de ruido": la confunden. En modelos de *Gaussian Splatting* el resultado puede ser catastrófico, con nubes flotantes, bordes falsos y zonas deformadas.
 
-El método solo usa la posición, la orientación y la hora de cada captura. Vale para cualquier vehículo autónomo, aéreo, terrestre o acuático, que registre la pose de su sensor.
+Este artículo muestra cómo detectar las capturas fuera de patrón **antes** de gastar horas de GPU y de análisis humano. Usamos solo los metadatos y técnicas clásicas: variables bien construidas, filtros físicos, normalización con sentido y un agrupamiento por densidad (HDBSCAN). Solo hacen falta la posición, la orientación y la hora de cada captura: vale para cualquier vehículo autónomo, aéreo, terrestre o acuático, que registre la pose de su sensor.
 
-Este artículo muestra cómo detectar las capturas fuera de patrón **antes** de gastar horas de GPU y de análisis humano. Usamos solo los metadatos y técnicas clásicas: variables bien construidas, filtros físicos, normalización con sentido y un agrupamiento por densidad (HDBSCAN). El resultado decide una de tres cosas:
+El resultado decide una de tres cosas:
 
 | Veredicto | Cuándo | Qué se hace |
 |---|---|---|
@@ -38,13 +38,13 @@ Cada etapa confía en la anterior. Si entran capturas que no siguen el patrón:
 - **El splat** intenta explicar a la vez todas las capturas. Una captura del camino, tomada desde fuera del área, obliga a crear gaussianas para el horizonte, el cielo o zonas vistas una sola vez. Son las "nubes" que flotan delante del observador y los bordes sucios.
 - **El coste se paga tarde**: una hora de GPU, después horas de inspección humana del modelo, y al final la causa está en 30 capturas de 900.
 
-### Por qué el horizonte y los giros bruscos hacen tanto daño
+### 1.1 Por qué el horizonte y los giros bruscos hacen tanto daño
 
 Una captura que mira al horizonte ve sobre todo cielo y paisaje lejano. El cielo no tiene puntos fijos que reconocer. El paisaje lejano aparece en esa captura y en ninguna otra. Para la SfM es una captura casi sin puntos en común con el resto, y lo poco que encaja lo encaja mal. Para el splat es peor: tiene que inventar gaussianas que expliquen ese fondo desde un solo punto de vista, y esas gaussianas quedan flotando entre el terreno y el observador.
 
 Un cambio brusco de dirección tiene el mismo efecto a menor escala. Dos capturas seguidas con direcciones muy distintas comparten poca escena, y la reconstrucción pierde el encadenamiento suave de una captura a la siguiente. La ruta ideal mantiene la dirección del sensor durante muchas capturas seguidas y la cambia solo en los extremos de cada pasada, fuera del área de interés.
 
-### El efecto: un splat que se rompe
+### 1.2 El efecto: un splat que se rompe
 
 Las dos vistas son de Rojales, de un splat entrenado con todas las capturas, antes de quitar las que este método marca como fuera de patrón.
 
@@ -104,60 +104,16 @@ with open(ruta, "rb") as f:                     # "rb": leer bytes, no texto
 # En este estudio el bucle da siempre una sola vuelta: el bloque cabe en el primer trozo.
 ```
 
-| Las 10 rutas del estudio | Capturas | Tamaño |
-|---|---|---|
-| Rojales | 610 | 8,05 GB |
-| Formiga, condominio | 1.583 | 21,23 GB |
-| Formiga, recursos hídricos | 680 | 6,10 GB |
-| Curvelo, Água Solene | 862 | 12,73 GB |
-| Curvelo, eucalipto | 495 | 4,82 GB |
-| João Pinheiro h45a | 851 | 13,41 GB |
-| João Pinheiro h30a | 926 | 14,29 GB |
-| Belo Horizonte, Caiçara | 636 | 6,75 GB |
-| Pompeu | 588 | 5,76 GB |
-| Divinópolis | 332 | 0,88 GB |
-| **Total de las imágenes** | **7.563** | **94,0 GB** |
-| **Lo que se lee** (un trozo de 64 KB por captura) | | **496 MB (0,5 %)** |
+| Las 10 rutas del estudio | Tamaño |
+|---|---|
+| Imágenes completas (7.563 capturas) | 94,0 GB |
+| Lo que se lee: un trozo de 64 KB por captura | **496 MB (0,5 %)** |
 
-Rojales, por ejemplo, se analiza entero en 5 s, gráficos incluidos.
-
-Es la diferencia entre un control que se hace siempre y uno que se salta por pereza.
+Rojales se analiza entero en 5 s, gráficos incluidos. Es la diferencia entre un control que se hace siempre y uno que se salta por pereza.
 
 ### 2.3 Poses de la reconstrucción (COLMAP)
 
 Si la ruta ya se procesó, la SfM entrega las poses en formato COLMAP: la rotación (cuaternión) y la traslación de cada captura en el marco del modelo. Es más preciso que el GPS, pero solo existe después de la SfM. Comparar las dos fuentes es en sí una prueba de calidad (sección 6.2).
-
-### 2.4 Tabla original y tabla transformada
-
-Siete capturas de Rojales, tal como vienen del sensor:
-
-| Captura | Hora | Latitud | Longitud | Altura relativa | Pitch del sensor | Yaw del vehículo |
-|---|---|---|---|---|---|---|
-| 0001 | 14:53:10 | 38.08350 | −0.72641 | 59,8 | −41,5 | −94,4 |
-| 0005 | 14:53:30 | 38.08341 | −0.72697 | 59,9 | −89,9 | 0,7 |
-| 0100 | 14:56:40 | 38.08305 | −0.72793 | 59,8 | −90,0 | 0,2 |
-| 0251 | 15:01:42 | 38.08388 | −0.72762 | 59,8 | −50,0 | 90,0 |
-| 0406 | 15:06:52 | 38.08420 | −0.72612 | 59,8 | −50,0 | −57,3 |
-| 0450 | 15:08:20 | 38.08329 | −0.72617 | 59,9 | −50,0 | −90,0 |
-| 0600 | 15:13:20 | 38.08254 | −0.72683 | 60,0 | −49,9 | 179,0 |
-
-Las mismas capturas después de la ingeniería de datos (secciones 3 y 4):
-
-| Captura | t (s) | Inclinación | Rumbo | Altura | d_incl | d_alt % | Apunta | Z = (incl, alt, sin, cos) | Grupo |
-|---|---|---|---|---|---|---|---|---|---|
-| 0001 | 0 | 48,5 | 266 | 59,8 | **18,6** | 0,0 | 2 | (16,2; 83,8; −3,8; −0,3) | **Camino** |
-| 0005 | 20 | 0,1 | 1 | 59,9 | 0,0 | 0,0 | −6 | (0,0; 83,9; —; —) | Nadir |
-| 0100 | 210 | 0,0 | 0 | 59,8 | 0,1 | 0,0 | −60 | (0,0; 83,8; —; —) | Nadir |
-| 0251 | 512 | 40,0 | 90 | 59,8 | 0,0 | 0,0 | −38 | (13,3; 83,8; 3,8; 0,0) | Oblicua E |
-| 0406 | 822 | 40,0 | **303** | 59,8 | 0,0 | 0,0 | 82 | (13,3; 83,8; −3,2; 2,1) | **Ruido** |
-| 0450 | 910 | 40,0 | 270 | 59,9 | 0,0 | 0,0 | −13 | (13,3; 83,9; −3,8; 0,0) | Oblicua O |
-| 0600 | 1210 | 40,1 | 179 | 60,0 | 0,0 | 0,0 | −173 | (13,4; 83,9; 0,1; −3,8) | Oblicua S |
-
-Así se lee: la 0001 es la primera captura, con el sensor todavía bajando (18,6 grados de cambio frente a su vecina): camino. La 0406 tiene la inclinación y la altura de la misión, pero su rumbo está 33 grados fuera del grupo Oeste: ruido. Las nadir no usan la dirección (—). En la tabla transformada ya no hace falta saber nada del vehículo para ver qué captura sobra.
-
-El gráfico muestra la misma mejora con las 610 capturas. Arriba, los datos tal como llegan: en la posición todas parecen iguales, y en los ángulos el Sur queda partido en dos (−180 y +180 son la misma dirección). Abajo, los datos transformados: cada grupo de la misión es un punto denso, y el camino queda solo, por encima del umbral de estabilidad. Los círculos blancos son las siete capturas de la tabla.
-
-![Rojales, datos originales y transformados](img/rojales-transformacion.png)
 
 ---
 
@@ -169,7 +125,7 @@ El gráfico muestra la misma mejora con las 610 capturas. Arriba, los datos tal 
 |---|---|---|
 | inclinación | ángulo del eje del sensor con la vertical | 0 = nadir, 40 = oblicua, 90 = horizonte |
 | rumbo | dirección del lado de arriba de la imagen | hacia dónde mira el sensor (N, E, S, O) |
-| altura | sensor sobre el suelo | la escala de la imagen |
+| altura | sensor sobre el suelo (con poses de la SfM) o sobre el punto de salida (solo EXIF) | la escala de la imagen |
 | tiempo | hora del nombre del archivo | el orden de la ruta |
 | **apunta** | rumbo menos la dirección del vehículo al centro del área | 0 = mira hacia dentro, 180 = hacia fuera |
 | **d_incl, d_alt** | cambio de inclinación (grados) y de altura (%) frente a la captura vecina en el tiempo | estabilidad |
@@ -252,26 +208,39 @@ Un último paso corrige un defecto conocido de los métodos por densidad, el **e
 
 Cada grupo se nombra con sus valores medios ("Oblicua 40°, 60 m, Este"). Un grupo que se puede leer es un grupo que una persona puede comprobar.
 
-### 4.1 Técnicas usadas
+### 4.1 Antes y después: siete capturas de Rojales
 
-| Etapa | Técnica | Dónde |
-|---|---|---|
-| Extracción | lectura parcial de binarios: solo los primeros KB de cada archivo | 2.2 |
-| Integración | dos fuentes de la misma pose (GPS + reconstrucción), proyección a UTM | 2.3 |
-| Ingeniería de variables | variables derivadas (inclinación, rumbo), relativas (apunta) y temporales (d_incl, d_alt) | 3.1 |
-| Series temporales | diferencia con la vecina más parecida, en una ventana de 10 s | 3.1 |
-| Categorización | reglas físicas con etiqueta y motivo para cada captura | 3.2 |
-| Limpieza de datos | deduplicación de capturas casi idénticas: vecinas en posición y dirección del sensor | 3.2 |
-| Transformación | logaritmo para la escala, seno y coseno para los ángulos | 3.3 |
-| Normalización | por tolerancia del dominio, no por la varianza de los datos | 3.3 |
-| Selección de variables | solo las que dicen el tipo de captura (inclinación, altura, dirección); la posición queda fuera | 3.4 |
-| Selección de modelo | estadística circular (longitud media resultante) para elegir el esquema | 3.4 |
-| Agrupamiento | HDBSCAN, sin número de grupos fijado | 4 |
-| Detección de atípicos | ruido de HDBSCAN + recorte por desviación angular | 4 |
-| Validación | correlación entre fuentes (prueba del domo) | 6.2 |
-| Visualización | gráficos de diagnóstico para la revisión humana | 5 |
+Siete capturas de Rojales, tal como vienen del sensor:
 
-Nada de esto es nuevo. Casi todo existe desde hace décadas. Lo que importa es elegir bien cada paso para este problema.
+| Captura | Hora | Latitud | Longitud | Altura relativa | Pitch del sensor | Yaw del vehículo |
+|---|---|---|---|---|---|---|
+| 0001 | 14:53:10 | 38.08350 | −0.72641 | 59,8 | −41,5 | −94,4 |
+| 0005 | 14:53:30 | 38.08341 | −0.72697 | 59,9 | −89,9 | 0,7 |
+| 0100 | 14:56:40 | 38.08305 | −0.72793 | 59,8 | −90,0 | 0,2 |
+| 0251 | 15:01:42 | 38.08388 | −0.72762 | 59,8 | −50,0 | 90,0 |
+| 0406 | 15:06:52 | 38.08420 | −0.72612 | 59,8 | −50,0 | −57,3 |
+| 0450 | 15:08:20 | 38.08329 | −0.72617 | 59,9 | −50,0 | −90,0 |
+| 0600 | 15:13:20 | 38.08254 | −0.72683 | 60,0 | −49,9 | 179,0 |
+
+Las mismas capturas después de la ingeniería de datos y del agrupamiento:
+
+| Captura | t (s) | Inclinación | Rumbo | Altura | d_incl | Apunta | Grupo |
+|---|---|---|---|---|---|---|---|
+| 0001 | 0 | 48,5 | 266 | 59,8 | **18,6** | 2 | **Camino** |
+| 0005 | 20 | 0,1 | 1 | 59,9 | 0,0 | −6 | Nadir |
+| 0100 | 210 | 0,0 | 0 | 59,8 | 0,1 | −60 | Nadir |
+| 0251 | 512 | 40,0 | 90 | 59,8 | 0,0 | −38 | Oblicua E |
+| 0406 | 822 | 40,0 | **303** | 59,8 | 0,0 | 82 | **Ruido** |
+| 0450 | 910 | 40,0 | 270 | 59,9 | 0,0 | −13 | Oblicua O |
+| 0600 | 1210 | 40,1 | 179 | 60,0 | 0,0 | −173 | Oblicua S |
+
+d_alt es 0,0 en las siete y no se muestra. La altura es la del punto de salida, la única que da el EXIF.
+
+Así se lee: la 0001 es la primera captura, con el sensor todavía bajando (18,6 grados de cambio frente a su vecina): camino. La 0406 tiene la inclinación y la altura de la misión, pero su rumbo está 33 grados fuera del grupo Oeste: ruido. En la tabla transformada ya no hace falta saber nada del vehículo para ver qué captura sobra.
+
+El gráfico muestra la misma mejora con las 610 capturas. Arriba, los datos tal como llegan: en la posición todas parecen iguales, y en los ángulos el Sur queda partido en dos (−180 y +180 son la misma dirección). Abajo, los datos transformados: cada grupo de la misión es un punto denso, y el camino queda solo, por encima del umbral de estabilidad. Los círculos blancos son las siete capturas de la tabla.
+
+![Rojales, datos originales y transformados](img/rojales-transformacion.png)
 
 ---
 
@@ -291,13 +260,15 @@ Esto importa todavía más cuando el método lo propone un modelo de lenguaje (L
 
 Ninguno de estos errores se veía en las métricas. Todos se veían en el gráfico.
 
-Por eso la función principal de la persona hoy no es escribir el código. Es:
+Por eso la función principal de la persona hoy no es escribir el código:
 
-1. **Visión crítica de punta a punta**: de la ruta del vehículo al modelo final, saber dónde puede romperse la cadena.
-2. **Análisis del problema**: entender por qué una captura hace daño antes de buscar cómo quitarla.
-3. **Especificar el inicio de la solución**: qué variables tienen sentido físico y qué tolerancias son "igual".
-4. **Iteraciones de refinamiento**: mirar los gráficos, encontrar el caso que falla y corregir.
-5. **Validación final**: aceptar el resultado solo cuando el gráfico no deja dudas.
+| Función | Qué hace |
+|---|---|
+| Visión de punta a punta | sabe dónde puede romperse la cadena, de la ruta al modelo final |
+| Análisis del problema | entiende por qué una captura hace daño antes de quitarla |
+| Inicio de la solución | elige variables con sentido físico y qué tolerancia es "igual" |
+| Refinamiento | mira los gráficos, encuentra el caso que falla y corrige |
+| Validación final | acepta el resultado solo cuando el gráfico no deja dudas |
 
 Un método que no se puede ver no se puede validar. Y un método que no se ha validado no debería decidir qué datos entran en una hora de GPU.
 
@@ -307,22 +278,24 @@ Un método que no se puede ver no se puede validar. Y un método que no se ha va
 
 Diez rutas completas, de 332 a 1.583 capturas. Siete con solo metadatos EXIF y tres también con las poses de COLMAP.
 
-| Ruta | Capturas | Ruta | Misión | Fuera de patrón | Veredicto |
-|---|---|---|---|---|---|
-| Rojales | 610 | cuadrícula: nadir + oblicuas N, E, S, O a 41° | 96,7 % | 20 | **aceptar y filtrar** (el mejor) |
-| Formiga, condominio | 1.583 | nadir a 120 m | 99,7 % | 4 | aceptar |
-| Formiga, recursos hídricos | 680 | nadir a 119 m | 96,8 % | 22 | filtrar |
-| Curvelo, Água Solene | 862 | nadir a 140 m | 96,5 % | 30 | filtrar |
-| Curvelo, eucalipto | 495 | nadir a 110 m | 94,9 % | 25 | filtrar |
-| João Pinheiro h45a | 851 | espiral nadir a 48 m | 94,8 % | 44 | **descartar**: domo en la SfM |
-| Belo Horizonte, Caiçara | 636 | nadir a 60 m | 93,1 % | 44 | filtrar |
-| João Pinheiro h30a | 926 | espiral nadir a 33 m | 91,7 % | 77 | filtrar (sustituye al h45a) |
-| Pompeu | 588 | nadir a 50 m | 83,7 % | 96 | filtrar |
-| Divinópolis | 332 | espiral: nadir + oblicuas hacia dentro y fuera | 78,6 % | 71 | filtrar (revisar el giro) |
+| Ruta | Capturas | Tamaño | Patrón | Misión | Fuera de patrón | Veredicto |
+|---|---|---|---|---|---|---|
+| Rojales | 610 | 8,05 GB | cuadrícula: nadir + oblicuas N, E, S, O a 41° | 96,7 % | 20 | filtrar (la mejor ruta) |
+| Formiga, condominio | 1.583 | 21,23 GB | nadir a 120 m | 99,7 % | 4 | aceptar |
+| Formiga, recursos hídricos | 680 | 6,10 GB | nadir a 119 m | 96,8 % | 22 | filtrar |
+| Curvelo, Água Solene | 862 | 12,73 GB | nadir a 140 m | 96,5 % | 30 | filtrar |
+| Curvelo, eucalipto | 495 | 4,82 GB | nadir a 110 m | 94,9 % | 25 | filtrar |
+| João Pinheiro h45a | 851 | 13,41 GB | espiral nadir a 48 m | 94,8 % | 44 | **descartar**: domo en la SfM |
+| Belo Horizonte, Caiçara | 636 | 6,75 GB | nadir a 60 m | 93,1 % | 44 | filtrar |
+| João Pinheiro h30a | 926 | 14,29 GB | espiral nadir a 33 m | 91,7 % | 77 | filtrar (sustituye a h45a) |
+| Pompeu | 588 | 5,76 GB | nadir a 50 m | 83,7 % | 96 | filtrar |
+| Divinópolis | 332 | 0,88 GB | espiral: nadir + oblicuas hacia dentro y fuera | 78,6 % | 71 | filtrar (revisar el giro) |
+
+Las alturas son sobre el suelo.
 
 ### Cómo leer los gráficos
 
-Cada ruta tiene dos gráficos (nadir y oblicuas) con seis paneles:
+Cada ruta tiene dos gráficos (nadir y oblicuas) con siete paneles:
 
 | Panel | Qué mirar |
 |---|---|
@@ -340,7 +313,7 @@ Colores: azul, verde, naranja y violeta para los grupos de misión; rojo para ca
 
 ![Rojales, oblicuas](img/rojales-oblicuas.png)
 
-La mejor ruta del conjunto. Una cuadrícula con las cuatro direcciones a la misma inclinación (41°) y la misma altura (77 m), más una pasada nadir:
+La mejor ruta del conjunto. Una cuadrícula con las cuatro direcciones a la misma inclinación (41°) y la misma altura (77 m sobre el suelo; 60 m sobre el punto de salida), más una pasada nadir:
 
 | Grupo | Capturas |
 |---|---|
@@ -358,7 +331,7 @@ En "inclinación en el tiempo" se ve la misión como una línea plana a 41°, y 
 
 ### 6.2 João Pinheiro: h45a frente a h30a, la misma área en dos rutas
 
-Dos rutas en espiral nadir sobre la misma área, el mismo día: uno a 48 m (h45a) y otro a 33 m (h30a). Son datasets equivalentes, y sirven para elegir.
+Dos rutas en espiral nadir sobre la misma área, el mismo día: una a 48 m (h45a) y otra a 33 m (h30a). Son datasets equivalentes, y sirven para elegir.
 
 ![João Pinheiro h45a, oblicuas](img/joao_h45a-oblicuas.png)
 
@@ -441,3 +414,26 @@ Cuadrícula nadir perfecta a 110 m. Las 25 duplicadas (cuadrados grises) están 
 La regla práctica que usamos:
 
 ![Regla práctica: repetir la ruta, aceptar o filtrar](img/regla.svg)
+
+---
+
+## Anexo: técnicas usadas
+
+| Etapa | Técnica | Dónde |
+|---|---|---|
+| Extracción | lectura parcial de binarios: solo los primeros KB de cada archivo | 2.2 |
+| Integración | dos fuentes de la misma pose (GPS + reconstrucción), proyección a UTM | 2.3 |
+| Ingeniería de variables | variables derivadas (inclinación, rumbo), relativas (apunta) y temporales (d_incl, d_alt) | 3.1 |
+| Series temporales | diferencia con la vecina más parecida, en una ventana de 10 s | 3.1 |
+| Categorización | reglas físicas con etiqueta y motivo para cada captura | 3.2 |
+| Limpieza de datos | deduplicación de capturas casi idénticas: vecinas en posición y dirección del sensor | 3.2 |
+| Transformación | logaritmo para la escala, seno y coseno para los ángulos | 3.3 |
+| Normalización | por tolerancia del dominio, no por la varianza de los datos | 3.3 |
+| Selección de variables | solo las que dicen el tipo de captura (inclinación, altura, dirección); la posición queda fuera | 3.4 |
+| Selección de modelo | estadística circular (longitud media resultante) para elegir el esquema | 3.4 |
+| Agrupamiento | HDBSCAN, sin número de grupos fijado | 4 |
+| Detección de atípicos | ruido de HDBSCAN + recorte por desviación angular | 4 |
+| Validación | correlación entre fuentes (prueba del domo) | 6.2 |
+| Visualización | gráficos de diagnóstico para la revisión humana | 5 |
+
+Nada de esto es nuevo. Casi todo existe desde hace décadas. Lo que importa es elegir bien cada paso para este problema.
