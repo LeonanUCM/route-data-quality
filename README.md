@@ -48,13 +48,16 @@ Un cambio brusco de dirección tiene el mismo efecto a menor escala. Dos captura
 
 Las dos vistas son de Rojales, de un splat entrenado con todas las capturas, antes de quitar las que este método marca como fuera de patrón.
 
-![Rojales con capturas malas: gaussianas flotando delante del observador](img/rojales-splat-flotantes.jpg)
-
-Cerca del suelo, la escena queda tapada por manchas largas y borrosas. Son gaussianas creadas para explicar capturas vistas desde fuera del área o hacia el horizonte. Desde el punto de vista de esas capturas no molestan. Desde cualquier otro punto, flotan entre el terreno y el observador.
-
-![Rojales con capturas malas: agujas en el borde y niebla bajo el suelo](img/rojales-splat-borde.jpg)
-
-En el borde del área, el terreno acaba en agujas y en una niebla clara por debajo del suelo. Ninguna captura de la misión ve esa zona así: solo la ven las capturas del camino.
+<table>
+<tr>
+<td width="50%" valign="top"><img src="img/rojales-splat-flotantes.jpg" alt="Rojales con capturas malas: gaussianas flotando delante del observador"></td>
+<td width="50%" valign="top"><img src="img/rojales-splat-borde.jpg" alt="Rojales con capturas malas: agujas en el borde y niebla bajo el suelo"></td>
+</tr>
+<tr>
+<td valign="top">Cerca del suelo, la escena queda tapada por manchas largas y borrosas. Son gaussianas creadas para explicar capturas vistas desde fuera del área o hacia el horizonte. Desde el punto de vista de esas capturas no molestan. Desde cualquier otro punto, flotan entre el terreno y el observador.</td>
+<td valign="top">En el borde del área, el terreno acaba en agujas y en una niebla clara por debajo del suelo. Ninguna captura de la misión ve esa zona así: solo la ven las capturas del camino.</td>
+</tr>
+</table>
 
 No es un defecto del entrenamiento. El modelo hace bien su trabajo con los datos que recibe. El error está en los datos.
 
