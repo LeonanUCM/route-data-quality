@@ -44,6 +44,20 @@ Una captura que mira al horizonte ve sobre todo cielo y paisaje lejano. El cielo
 
 Un cambio brusco de dirección tiene el mismo efecto a menor escala. Dos capturas seguidas con direcciones muy distintas comparten poca escena, y la reconstrucción pierde el encadenamiento suave de una captura a la siguiente. La ruta ideal mantiene la dirección del sensor durante muchas capturas seguidas y la cambia solo en los extremos de cada pasada, fuera del área de interés.
 
+### El efecto: un splat que se rompe
+
+Las dos vistas son de Rojales, de un splat entrenado con todas las capturas, antes de quitar las que este método marca como fuera de patrón.
+
+![Rojales con capturas malas: gaussianas flotando delante del observador](img/rojales-splat-flotantes.jpg)
+
+Cerca del suelo, la escena queda tapada por manchas largas y borrosas. Son gaussianas creadas para explicar capturas vistas desde fuera del área o hacia el horizonte. Desde el punto de vista de esas capturas no molestan. Desde cualquier otro punto, flotan entre el terreno y el observador.
+
+![Rojales con capturas malas: agujas en el borde y niebla bajo el suelo](img/rojales-splat-borde.jpg)
+
+En el borde del área, el terreno acaba en agujas y en una niebla clara por debajo del suelo. Ninguna captura de la misión ve esa zona así: solo la ven las capturas del camino.
+
+No es un defecto del entrenamiento. El modelo hace bien su trabajo con los datos que recibe. El error está en los datos.
+
 Revisar el registro de la ruta cuesta segundos. Por eso va primero.
 
 ---
